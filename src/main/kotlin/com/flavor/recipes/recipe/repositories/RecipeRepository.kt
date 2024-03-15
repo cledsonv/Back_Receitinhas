@@ -7,5 +7,5 @@ import org.springframework.stereotype.Repository
 
 @Repository()
 interface RecipeRepository : MongoRepository<RecipeEntity, String> {
-
+    fun findByStatusNot(status: String): List<RecipeEntity>
 }

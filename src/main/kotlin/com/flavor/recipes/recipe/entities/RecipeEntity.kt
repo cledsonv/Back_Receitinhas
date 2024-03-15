@@ -19,5 +19,6 @@ data class RecipeEntity(
     val portion: Int,
     val instruction: String,
     val serveFood: String,
-    val ingredients: Set<RecipeIngredientEntity>
+    val ingredients: Set<RecipeIngredientEntity>,
+    val status: RecipeStatus,
 )

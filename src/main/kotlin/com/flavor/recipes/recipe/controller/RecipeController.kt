@@ -3,6 +3,7 @@ package com.flavor.recipes.recipe.controller
 import com.flavor.recipes.core.BusinessException
 import com.flavor.recipes.core.HandleException
 import com.flavor.recipes.recipe.entities.RecipeEntity
+import com.flavor.recipes.recipe.entities.RecipeStatus
 import com.flavor.recipes.recipe.repositories.RecipeRepository
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.bind.annotation.GetMapping
@@ -23,7 +24,7 @@ class RecipeController {
     @GetMapping()
     fun list(authentication: Authentication): ResponseEntity<Any> {
         try {
-            return ResponseEntity.ok(recipeRepository.findAll());
+            return ResponseEntity.ok(recipeRepository.findByStatusNot(RecipeStatus.removed.name));
         } catch (e: Exception) {
             return HandleException().handle(e)
         }
@@ -32,11 +33,15 @@ class RecipeController {
     @GetMapping("/{id}")
     fun get(@PathVariable id: String): ResponseEntity<Any> {
         try {
-            val findIngredient = recipeRepository.findById(id)
-            if (!findIngredient.isPresent) {
+            val recipe = recipeRepository.findById(id)
+            if (!recipe.isPresent) {
                throw BusinessException("Receita não encontrada")
             }
-            return ResponseEntity.ok(findIngredient.get())
+            if (recipe.get().status == RecipeStatus.removed) {
+                throw BusinessException("Está receita foi removida")
+            }
+
+            return ResponseEntity.ok(recipe.get())
         } catch (e: Exception) {
             return HandleException().handle(e)
         }
@@ -45,6 +50,9 @@ class RecipeController {
     @PostMapping
     fun create(@RequestBody body: RecipeEntity): ResponseEntity<Any> {
         try {
+            if (body.status == RecipeStatus.removed) {
+                throw BusinessException("Não pode criar uma receita com status removido")
+            }
             val result = recipeRepository.save(body)
             return ResponseEntity.ok(result)
         } catch (e: Exception) {
@@ -59,6 +67,9 @@ class RecipeController {
             
             val recipe = recipeRepository.findById(id)
             if (!recipe.isPresent) throw BusinessException("Receita não encontrada")
+            if (recipe.get().status == RecipeStatus.removed) {
+                throw BusinessException("Está receita não pode ser alterada, removida")
+            }
 
             val result = recipeRepository.save(recipe.get().copy(
                 details = body.details,
@@ -71,6 +82,7 @@ class RecipeController {
                 subTitle = body.subTitle,
                 timePrepared = body.timePrepared,
                 title = body.title,
+                status = body.status
             ))
             return ResponseEntity.ok(result)
         } catch (e: Exception) {
